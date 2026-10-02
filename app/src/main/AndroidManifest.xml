@@ -10,7 +10,7 @@
     <application
         android:allowBackup="true"
         android:label="EBike Display"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@style/Theme.EBikeDisplay">
         <activity
             android:name=".MainActivity"
             android:exported="true">
