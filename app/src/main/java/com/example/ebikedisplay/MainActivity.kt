@@ -26,6 +26,17 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.math.min
 
+// ТЕСТОВЫЕ ДАННЫЕ — потом заменим на реальные из BLE
+private val testSpeed = 45f
+private val testVoltage = 58.4f
+private val testBattery = 78
+private val testRange = 54
+private val testTemp = 32
+private val testPower = 850
+private val testConsumption = 18.5f
+private val testMode = "Sport"
+private val testError = 0
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,17 +72,16 @@ fun DashboardScreen() {
                 .fillMaxHeight(),
             contentAlignment = Alignment.Center
         ) {
-            // Круглый спидометр
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .aspectRatio(1f),
                 contentAlignment = Alignment.Center
             ) {
-                SpeedometerGauge(speed = 0f, maxSpeed = 80f)
+                SpeedometerGauge(speed = testSpeed, maxSpeed = 80f)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "0",
+                        text = testSpeed.toInt().toString(),
                         color = Color.White,
                         fontSize = 72.sp,
                         fontWeight = FontWeight.Bold
@@ -99,8 +109,16 @@ fun DashboardScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatusPill("MODE: P", Color(0xFFFFC107), Modifier.weight(1f))
-                StatusPill("OK", Color(0xFF4CAF50), Modifier.weight(1f))
+                val modeColor = when (testMode) {
+                    "P" -> Color(0xFFFFC107)
+                    "Eco" -> Color(0xFF4CAF50)
+                    else -> Color(0xFFFF5722)
+                }
+                StatusPill("MODE: $testMode", modeColor, Modifier.weight(1f))
+
+                val errColor = if (testError == 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+                val errText = if (testError == 0) "OK" else "ERR $testError"
+                StatusPill(errText, errColor, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -110,24 +128,24 @@ fun DashboardScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                InfoTile("VOLT", "0.0V", Modifier.weight(1f))
-                InfoTile("BAT", "0%", Modifier.weight(1f))
+                InfoTile("VOLT", "%.1fV".format(testVoltage), Modifier.weight(1f))
+                InfoTile("BAT", "$testBattery%", Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                InfoTile("RANGE", "0 km", Modifier.weight(1f))
-                InfoTile("TEMP", "0°C", Modifier.weight(1f))
+                InfoTile("RANGE", "$testRange km", Modifier.weight(1f))
+                InfoTile("TEMP", "$testTemp°C", Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                InfoTile("POWER", "0 W", Modifier.weight(1f))
-                InfoTile("Wh/km", "0.0", Modifier.weight(1f))
+                InfoTile("POWER", "$testPower W", Modifier.weight(1f))
+                InfoTile("Wh/km", "%.1f".format(testConsumption), Modifier.weight(1f))
             }
         }
     }
@@ -156,11 +174,11 @@ fun SpeedometerGauge(speed: Float, maxSpeed: Float) {
             style = Stroke(width = stroke, cap = StrokeCap.Round)
         )
 
-        // Активная дуга — цвет зависит от скорости
+        // Активная дуга
         val activeColor = when {
-            progress < 0.5f -> Color(0xFF4CAF50)  // зелёный
-            progress < 0.8f -> Color(0xFFFFC107)  // жёлтый
-            else -> Color(0xFFF44336)             // красный
+            progress < 0.5f -> Color(0xFF4CAF50)
+            progress < 0.8f -> Color(0xFFFFC107)
+            else -> Color(0xFFF44336)
         }
         drawArc(
             color = activeColor,
@@ -183,7 +201,8 @@ fun StatusPill(text: String, color: Color, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Bold,
         modifier = modifier
             .background(Color(0xFF1A1A1A), RoundedCornerShape(20.dp))
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center
     )
 }
 
