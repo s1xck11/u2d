@@ -3,9 +3,10 @@ package com.example.ebikedisplay
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,10 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -28,18 +29,19 @@ fun DashboardScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D0D0D))
+            .background(Color(0xFF07080C))
     ) {
-        // Синий диагональный луч (как на референсе)
+        // Синий диагональный луч из верхнего левого угла
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF1A2C4A).copy(alpha = 0.7f),
-                        Color(0xFF0D0D0D).copy(alpha = 0f)
+                        Color(0xFF1B3358).copy(alpha = 0.85f),
+                        Color(0xFF0A1424).copy(alpha = 0.3f),
+                        Color(0x00000000)
                     ),
-                    start = Offset(0f, size.height * 0.1f),
-                    end = Offset(size.width * 0.7f, size.height * 0.6f)
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width * 0.75f, size.height * 1.0f)
                 )
             )
         }
@@ -48,72 +50,111 @@ fun DashboardScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 28.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Левые иконки статуса (фара, мигалка, телефон)
-            Text(text = "💡", fontSize = 18.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "⚡", fontSize = 18.sp, color = Color(0xFF4CAF50))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "📱", fontSize = 18.sp, color = Color(0xFF888888))
+            Icon(
+                imageVector = Icons.Filled.Lightbulb,
+                contentDescription = null,
+                tint = Color(0xFF4A78C0),
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Icon(
+                imageVector = Icons.Filled.Bolt,
+                contentDescription = null,
+                tint = Color(0xFF4A78C0),
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Icon(
+                imageVector = Icons.Filled.PhoneAndroid,
+                contentDescription = null,
+                tint = Color(0xFF4A78C0),
+                modifier = Modifier.size(22.dp)
+            )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Центр — режим
             Text(
                 text = when (state.mode) {
-                    "P" -> "停车"
-                    "Eco" -> "经济"
-                    else -> "运动"
+                    "P" -> "P"
+                    "Eco" -> "ECO"
+                    else -> "SPORT"
                 },
                 color = Color.White,
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Правые иконки статуса
-            Text(text = "🔋", fontSize = 18.sp, color = Color(0xFF4CAF50))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "📶", fontSize = 18.sp, color = Color(0xFF4CAF50))
+            Icon(
+                imageVector = Icons.Filled.BatteryFull,
+                contentDescription = null,
+                tint = Color(0xFF4A78C0),
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Icon(
+                imageVector = Icons.Filled.SignalCellularAlt,
+                contentDescription = null,
+                tint = Color(0xFF4A78C0),
+                modifier = Modifier.size(22.dp)
+            )
         }
 
-        // ЛЕВАЯ КОЛОНКА со значениями
+        // ЛЕВАЯ КОЛОНКА
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 24.dp)
-                .width(200.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(start = 28.dp)
+                .width(220.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            DataRow(label = "单次里程", value = "%.1f km".format(state.range * 0.01f))
-            DataRow(label = "单次电耗", value = "%.1f wh".format(state.consumption * 20f))
-            DataRow(label = "平均电耗", value = "%.1f wh/km".format(state.consumption))
-            DataRow(label = "总里程", value = "${state.range * 40} km")
+            DataRow(
+                icon = Icons.Filled.Straighten,
+                label = "ПРОБЕГ ЗА ПОЕЗДКУ",
+                value = "0,0 km"
+            )
+            DataRow(
+                icon = Icons.Filled.Bolt,
+                label = "РАСХОД ЗА ПОЕЗДКУ",
+                value = "0,0 wh"
+            )
+            DataRow(
+                icon = Icons.Filled.ShowChart,
+                label = "СРЕДНИЙ РАСХОД",
+                value = "0,0 wh/km"
+            )
+            DataRow(
+                icon = Icons.Filled.Route,
+                label = "ОБЩИЙ ПРОБЕГ",
+                value = "0 km"
+            )
         }
 
-        // ЦЕНТР — скутер
+        // ЦЕНТР — СКУТЕР (большой)
         Image(
             painter = painterResource(id = R.drawable.scooter),
             contentDescription = "Scooter",
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxHeight(0.6f)
-                .aspectRatio(0.7f),
+                .offset(x = (-40).dp)
+                .fillMaxHeight(0.85f)
+                .aspectRatio(0.8f),
             contentScale = ContentScale.Fit
         )
 
-        // СПРАВА В ЦЕНТРЕ — большая буква P
+        // БОЛЬШАЯ БУКВА P (за скутером, правее центра)
         Text(
             text = state.mode.first().toString(),
-            color = Color(0xFF3A5A8C).copy(alpha = 0.7f),
-            fontSize = 140.sp,
+            color = Color(0xFF2E4874).copy(alpha = 0.85f),
+            fontSize = 180.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 60.dp)
+                .align(Alignment.Center)
+                .offset(x = 180.dp, y = (-10).dp)
         )
 
         // НИЖНЯЯ ПАНЕЛЬ
@@ -121,35 +162,43 @@ fun DashboardScreen(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 28.dp, vertical = 18.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            // Левая часть — Range и %
             Column {
-                Text(
-                    text = "距离 (EST) 剩余里程",
-                    color = Color(0xFF888888),
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Navigation,
+                        contentDescription = null,
+                        tint = Color(0xFF888888),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "ЗАПАС ХОДА (ОЦЕНКА)",
+                        color = Color(0xFF888888),
+                        fontSize = 11.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = "Range",
                         color = Color.White,
-                        fontSize = 14.sp
+                        fontSize = 16.sp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "${state.range} km",
+                        text = "0 km",
                         color = Color.White,
-                        fontSize = 22.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "${state.battery}%",
+                        text = "0%",
                         color = Color(0xFF4CAF50),
-                        fontSize = 22.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -157,26 +206,30 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Правая часть — температура, дата, время
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(text = "🌡", fontSize = 16.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${state.temperature}°C",
-                    color = Color.White,
-                    fontSize = 16.sp
+                Icon(
+                    imageVector = Icons.Filled.Thermostat,
+                    contentDescription = null,
+                    tint = Color(0xFF888888),
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "10/11",
+                    text = "0°C",
                     color = Color.White,
-                    fontSize = 16.sp
+                    fontSize = 18.sp
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
+                Text(
+                    text = "11.10",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
+                Spacer(modifier = Modifier.width(20.dp))
                 Text(
                     text = "18:35",
                     color = Color.White,
-                    fontSize = 16.sp
+                    fontSize = 18.sp
                 )
             }
         }
@@ -184,18 +237,29 @@ fun DashboardScreen(
 }
 
 @Composable
-fun DataRow(label: String, value: String) {
-    Column {
-        Text(
-            text = label,
-            color = Color(0xFF888888),
-            fontSize = 11.sp
+fun DataRow(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFF4A78C0),
+            modifier = Modifier.size(22.dp)
         )
-        Text(
-            text = value,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = label,
+                color = Color(0xFF6A6A6A),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = value,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
