@@ -80,10 +80,12 @@ fun DashboardScreen(
             modifier = Modifier.align(Alignment.TopStart)
         )
 
-        // ЛЕВАЯ КОЛОНКА
+        // ЛЕВАЯ КОЛОНКА (между TopBar и BottomBar)
         LeftColumn(
             state = state,
-            modifier = Modifier.align(Alignment.CenterStart)
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(top = 80.dp, bottom = 100.dp)
         )
 
         // СКУТЕР (исчезает при движении)
@@ -99,15 +101,15 @@ fun DashboardScreen(
             contentScale = ContentScale.Fit
         )
 
-        // БУКВА P (исчезает при движении)
+        // БУКВА P (исчезает при движении) — ближе к скутеру
         Text(
             text = state.mode.first().toString(),
             color = Color(0xFF2E4874).copy(alpha = pAlpha),
-            fontSize = 180.sp,
+            fontSize = 140.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.Center)
-                .offset(x = 60.dp, y = (-10).dp)
+                .offset(x = 20.dp, y = (-10).dp)
         )
 
         // СПИДОМЕТР (появляется при движении)
@@ -115,7 +117,7 @@ fun DashboardScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .fillMaxHeight(0.9f)
+                    .fillMaxHeight(0.85f)
                     .aspectRatio(1f)
                     .alpha(speedAlpha),
                 contentAlignment = Alignment.Center
@@ -137,7 +139,7 @@ fun DashboardScreen(
             }
         }
 
-        // НИЖНЯЯ ПАНЕЛЬ
+        // НИЖНЯЯ ПАНЕЛЬ (только Range, %, температура, дата, время)
         BottomBar(
             state = state,
             modifier = Modifier.align(Alignment.BottomStart)
@@ -185,13 +187,25 @@ fun LeftColumn(state: DashboardState, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .padding(start = 28.dp)
-            .width(220.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .width(200.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DataRow(Icons.Filled.Straighten, "ПРОБЕГ ЗА ПОЕЗДКУ", "0,0 km")
-        DataRow(Icons.Filled.Bolt, "РАСХОД ЗА ПОЕЗДКУ", "0,0 wh")
-        DataRow(Icons.Filled.ShowChart, "СРЕДНИЙ РАСХОД", "%.1f wh/km".format(state.consumption))
-        DataRow(Icons.Filled.Route, "ОБЩИЙ ПРОБЕГ", "${state.range * 40} km")
+        // Только 3 строки — без дубля "Общий пробег" с нижней панелью
+        DataRow(
+            Icons.Filled.Straighten,
+            "ПРОБЕГ ЗА ПОЕЗДКУ",
+            "0,0 km"
+        )
+        DataRow(
+            Icons.Filled.Bolt,
+            "РАСХОД ЗА ПОЕЗДКУ",
+            "0,0 wh"
+        )
+        DataRow(
+            Icons.Filled.ShowChart,
+            "СРЕДНИЙ РАСХОД",
+            "%.1f wh/km".format(state.consumption)
+        )
     }
 }
 
@@ -203,24 +217,28 @@ fun BottomBar(state: DashboardState, modifier: Modifier = Modifier) {
             .padding(horizontal = 28.dp, vertical = 18.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Navigation, null, tint = Color(0xFF888888), modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("ЗАПАС ХОДА (ОЦЕНКА)", color = Color(0xFF888888), fontSize = 11.sp)
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("Range", color = Color.White, fontSize = 16.sp)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("${state.range} km", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("${state.battery}%", color = Color(0xFF4CAF50), fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            }
+        // Слева — Range и %
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("Range", color = Color.White, fontSize = 16.sp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                "${state.range} km",
+                color = Color.White,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                "${state.battery}%",
+                color = Color(0xFF4CAF50),
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // Справа — температура, дата, время
         Row(verticalAlignment = Alignment.Bottom) {
             Icon(Icons.Filled.Thermostat, null, tint = Color(0xFF888888), modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
@@ -299,7 +317,7 @@ fun DataRow(icon: ImageVector, label: String, value: String) {
             Text(
                 text = value,
                 color = Color.White,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
         }
