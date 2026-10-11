@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.min
 
-// Скорость, при которой P превращается в спидометр
 private const val PARKING_THRESHOLD = 2f
 
 @Composable
@@ -39,7 +38,6 @@ fun DashboardScreen(
 ) {
     val isParked = state.speed < PARKING_THRESHOLD
 
-    // Плавная анимация прозрачности скутера и P
     val scooterAlpha by animateFloatAsState(
         targetValue = if (isParked) 1f else 0f,
         animationSpec = tween(durationMillis = 800),
@@ -77,10 +75,16 @@ fun DashboardScreen(
         }
 
         // ВЕРХНЯЯ ПАНЕЛЬ
-        TopBar(mode = state.mode)
+        TopBar(
+            mode = state.mode,
+            modifier = Modifier.align(Alignment.TopStart)
+        )
 
         // ЛЕВАЯ КОЛОНКА
-        LeftColumn(state = state)
+        LeftColumn(
+            state = state,
+            modifier = Modifier.align(Alignment.CenterStart)
+        )
 
         // СКУТЕР (исчезает при движении)
         Image(
@@ -134,14 +138,17 @@ fun DashboardScreen(
         }
 
         // НИЖНЯЯ ПАНЕЛЬ
-        BottomBar(state = state)
+        BottomBar(
+            state = state,
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
     }
 }
 
 @Composable
-fun TopBar(mode: String) {
+fun TopBar(mode: String, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 28.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -174,10 +181,9 @@ fun TopBar(mode: String) {
 }
 
 @Composable
-fun LeftColumn(state: DashboardState) {
+fun LeftColumn(state: DashboardState, modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
-            .align(Alignment.CenterStart)
+        modifier = modifier
             .padding(start = 28.dp)
             .width(220.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -190,12 +196,11 @@ fun LeftColumn(state: DashboardState) {
 }
 
 @Composable
-fun BottomBar(state: DashboardState) {
+fun BottomBar(state: DashboardState, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 28.dp, vertical = 18.dp)
-            .align(Alignment.BottomStart),
+            .padding(horizontal = 28.dp, vertical = 18.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         Column {
@@ -240,7 +245,6 @@ fun SpeedometerGauge(speed: Float, maxSpeed: Float) {
         val progress = (speed / maxSpeed).coerceIn(0f, 1f)
         val sweep = totalSweep * progress
 
-        // Фоновая дуга
         drawArc(
             color = Color(0xFF1A1A22),
             startAngle = startAngle,
@@ -251,15 +255,13 @@ fun SpeedometerGauge(speed: Float, maxSpeed: Float) {
             style = Stroke(width = stroke, cap = StrokeCap.Round)
         )
 
-        // Цвет активной дуги: белый → жёлтый → красный
         val activeColor = when {
-            progress < 30f / 80f -> Color.White                          // до 30 км/ч
-            progress < 45f / 80f -> Color(0xFFFFD54F)                    // 30–45 км/ч (жёлтый)
-            progress < 60f / 80f -> Color(0xFFFF9800)                    // 45–60 км/ч (оранжевый)
-            else -> Color(0xFFF44336)                                    // 60+ км/ч (красный)
+            progress < 30f / 80f -> Color.White
+            progress < 45f / 80f -> Color(0xFFFFD54F)
+            progress < 60f / 80f -> Color(0xFFFF9800)
+            else -> Color(0xFFF44336)
         }
 
-        // Градиент от белого к текущему цвету — для плавности
         drawArc(
             brush = Brush.sweepGradient(
                 0f to Color.White,
