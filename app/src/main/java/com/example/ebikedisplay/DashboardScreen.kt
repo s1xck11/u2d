@@ -16,18 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.min
 
 private const val PARKING_THRESHOLD = 2f
 
@@ -38,6 +34,7 @@ fun DashboardScreen(
 ) {
     val isParked = state.speed < PARKING_THRESHOLD
 
+    // Анимация появления/исчезновения скутера и P
     val scooterAlpha by animateFloatAsState(
         targetValue = if (isParked) 1f else 0f,
         animationSpec = tween(durationMillis = 800),
@@ -53,6 +50,17 @@ fun DashboardScreen(
         animationSpec = tween(durationMillis = 800),
         label = "speedAlpha"
     )
+
+    // Размер цифры скорости — растёт с набором скорости
+    val speedFontSize = (100 + (state.speed / 80f) * 40).sp
+
+    // Цвет цифры скорости: до 25 — зелёный, до 40 — жёлтый, 60+ — красный
+    val speedColor = when {
+        state.speed < 25f -> Color(0xFF4CAF50)   // зелёный
+        state.speed < 40f -> Color(0xFFFFD54F)   // жёлтый
+        state.speed < 60f -> Color(0xFFFF9800)   // оранжевый
+        else -> Color(0xFFF44336)                // красный
+    }
 
     Box(
         modifier = Modifier
@@ -76,11 +84,11 @@ fun DashboardScreen(
 
         // ВЕРХНЯЯ ПАНЕЛЬ
         TopBar(
-            mode = state.mode,
+            speedMode = state.speedMode,
             modifier = Modifier.align(Alignment.TopStart)
         )
 
-        // ЛЕВАЯ КОЛОНКА (между TopBar и BottomBar)
+        // ЛЕВАЯ КОЛОНКА
         LeftColumn(
             state = state,
             modifier = Modifier
@@ -101,45 +109,50 @@ fun DashboardScreen(
             contentScale = ContentScale.Fit
         )
 
-        // БУКВА P (исчезает при движении) — ближе к скутеру
-        Text(
-            text = state.mode.first().toString(),
-            color = Color(0xFF2E4874).copy(alpha = pAlpha),
-            fontSize = 140.sp,
-            fontWeight = FontWeight.Bold,
+        // БУКВА P С ТЕНЬЮ (исчезает при движении)
+        Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(x = 20.dp, y = (-10).dp)
-        )
+        ) {
+            Text(
+                text = "P",
+                color = Color.Black.copy(alpha = pAlpha * 0.5f),
+                fontSize = 140.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.offset(x = 6.dp, y = 6.dp)
+            )
+            Text(
+                text = "P",
+                color = Color(0xFF2E4874).copy(alpha = pAlpha),
+                fontSize = 140.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
-        // СПИДОМЕТР (появляется при движении)
+        // БОЛЬШАЯ ЦИФРА СКОРОСТИ (появляется при движении)
         if (speedAlpha > 0.01f) {
-            Box(
+            Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .fillMaxHeight(0.85f)
-                    .aspectRatio(1f)
                     .alpha(speedAlpha),
-                contentAlignment = Alignment.Center
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                SpeedometerGauge(speed = state.speed, maxSpeed = 80f)
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = state.speed.toInt().toString(),
-                        color = Color.White,
-                        fontSize = 96.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "km/h",
-                        color = Color(0xFF00E5FF),
-                        fontSize = 22.sp
-                    )
-                }
+                Text(
+                    text = state.speed.toInt().toString(),
+                    color = speedColor,
+                    fontSize = speedFontSize,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "km/h",
+                    color = Color(0xFF00E5FF),
+                    fontSize = 24.sp
+                )
             }
         }
 
-        // НИЖНЯЯ ПАНЕЛЬ (только Range, %, температура, дата, время)
+        // НИЖНЯЯ ПАНЕЛЬ
         BottomBar(
             state = state,
             modifier = Modifier.align(Alignment.BottomStart)
@@ -148,7 +161,15 @@ fun DashboardScreen(
 }
 
 @Composable
-fun TopBar(mode: String, modifier: Modifier = Modifier) {
+fun TopBar(speedMode: String, modifier: Modifier = Modifier) {
+    // 1 = Eco, 2 = City, 3 = Sport
+    val (modeText, modeColor) = when (speedMode) {
+        "1" -> "Eco" to Color(0xFF4CAF50)
+        "2" -> "City" to Color(0xFFFFC107)
+        "3" -> "Sport" to Color(0xFFFF5722)
+        else -> speedMode to Color.White
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -164,12 +185,8 @@ fun TopBar(mode: String, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = when (mode) {
-                "P" -> "P"
-                "Eco" -> "ECO"
-                else -> "SPORT"
-            },
-            color = Color.White,
+            text = modeText,
+            color = modeColor,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
@@ -190,22 +207,9 @@ fun LeftColumn(state: DashboardState, modifier: Modifier = Modifier) {
             .width(200.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Только 3 строки — без дубля "Общий пробег" с нижней панелью
-        DataRow(
-            Icons.Filled.Straighten,
-            "ПРОБЕГ ЗА ПОЕЗДКУ",
-            "0,0 km"
-        )
-        DataRow(
-            Icons.Filled.Bolt,
-            "РАСХОД ЗА ПОЕЗДКУ",
-            "0,0 wh"
-        )
-        DataRow(
-            Icons.Filled.ShowChart,
-            "СРЕДНИЙ РАСХОД",
-            "%.1f wh/km".format(state.consumption)
-        )
+        DataRow(Icons.Filled.Straighten, "ПРОБЕГ ЗА ПОЕЗДКУ", "0,0 km")
+        DataRow(Icons.Filled.Bolt, "РАСХОД ЗА ПОЕЗДКУ", "0,0 wh")
+        DataRow(Icons.Filled.ShowChart, "СРЕДНИЙ РАСХОД", "%.1f wh/km".format(state.consumption))
     }
 }
 
@@ -217,7 +221,6 @@ fun BottomBar(state: DashboardState, modifier: Modifier = Modifier) {
             .padding(horizontal = 28.dp, vertical = 18.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        // Слева — Range и %
         Row(verticalAlignment = Alignment.Bottom) {
             Text("Range", color = Color.White, fontSize = 16.sp)
             Spacer(modifier = Modifier.width(10.dp))
@@ -238,7 +241,6 @@ fun BottomBar(state: DashboardState, modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Справа — температура, дата, время
         Row(verticalAlignment = Alignment.Bottom) {
             Icon(Icons.Filled.Thermostat, null, tint = Color(0xFF888888), modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
@@ -248,51 +250,6 @@ fun BottomBar(state: DashboardState, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(20.dp))
             Text("18:35", color = Color.White, fontSize = 18.sp)
         }
-    }
-}
-
-@Composable
-fun SpeedometerGauge(speed: Float, maxSpeed: Float) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val stroke = 20.dp.toPx()
-        val diameter = min(size.width, size.height) - stroke
-        val radius = diameter / 2
-        val center = Offset(size.width / 2, size.height / 2)
-        val startAngle = 135f
-        val totalSweep = 270f
-        val progress = (speed / maxSpeed).coerceIn(0f, 1f)
-        val sweep = totalSweep * progress
-
-        drawArc(
-            color = Color(0xFF1A1A22),
-            startAngle = startAngle,
-            sweepAngle = totalSweep,
-            useCenter = false,
-            topLeft = Offset(center.x - radius, center.y - radius),
-            size = Size(diameter, diameter),
-            style = Stroke(width = stroke, cap = StrokeCap.Round)
-        )
-
-        val activeColor = when {
-            progress < 30f / 80f -> Color.White
-            progress < 45f / 80f -> Color(0xFFFFD54F)
-            progress < 60f / 80f -> Color(0xFFFF9800)
-            else -> Color(0xFFF44336)
-        }
-
-        drawArc(
-            brush = Brush.sweepGradient(
-                0f to Color.White,
-                progress to activeColor,
-                1f to activeColor
-            ),
-            startAngle = startAngle,
-            sweepAngle = sweep,
-            useCenter = false,
-            topLeft = Offset(center.x - radius, center.y - radius),
-            size = Size(diameter, diameter),
-            style = Stroke(width = stroke, cap = StrokeCap.Round)
-        )
     }
 }
 
