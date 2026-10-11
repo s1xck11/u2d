@@ -22,12 +22,10 @@ import java.util.UUID
 
 private const val TAG = "BleManager"
 
-// UUID сервиса и характеристики (Nordic UART)
 private val SERVICE_UUID: UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
 private val TX_CHARACTERISTIC_UUID: UUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
 private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
 
-// Имя нашего ESP32
 private const val DEVICE_NAME = "EBike-Display"
 
 class BleManager(
@@ -37,10 +35,8 @@ class BleManager(
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothGatt: BluetoothGatt? = null
 
-    // Состояние дисплея — обновляется в messageHandler
     private var state = DashboardState()
 
-    // Для расчёта мощности
     private var lastVoltage: Float = 0f
     private var lastTime: Long = 0L
     private var accumulatedWh: Float = 0f
@@ -77,7 +73,6 @@ class BleManager(
         scanner.startScan(null, settings, scanCallback)
         Log.d(TAG, "Сканирование запущено")
 
-        // Останавливаем сканирование через 10 секунд
         Handler(Looper.getMainLooper()).postDelayed({
             scanner.stopScan(scanCallback)
             if (!state.bleConnected) {
@@ -147,7 +142,6 @@ class BleManager(
             }
 
             try {
-                // Включаем уведомления
                 gatt.setCharacteristicNotification(characteristic, true)
                 val descriptor = characteristic.getDescriptor(CCCD_UUID)
                 if (descriptor != null) {
@@ -183,8 +177,8 @@ class BleManager(
         val range = parsed["RANGE"]?.toIntOrNull() ?: state.range
         val temp = parsed["TEMP"]?.toIntOrNull() ?: state.temperature
         val err = parsed["ERR"]?.toIntOrNull() ?: state.errorCode
+        val speedMode = parsed["MODE"] ?: state.speedMode
 
-        // Расчёт мощности по просадке напряжения
         val now = System.currentTimeMillis()
         var power = state.power
         if (lastTime > 0 && lastVoltage > 0f && speed > 1f) {
@@ -201,11 +195,7 @@ class BleManager(
         val consumption = if (accumulatedKm > 0.01f) accumulatedWh / accumulatedKm else state.consumption
         val health = ((voltage / 58.4f) * 100).coerceIn(0f, 100f).toInt()
 
-        val mode = when {
-            speed < 0.5f -> "P"
-            speed < 25f -> "Eco"
-            else -> "Sport"
-        }
+        val mode = if (speed < 0.5f) "P" else "D"
 
         state = state.copy(
             speed = speed,
@@ -215,6 +205,7 @@ class BleManager(
             temperature = temp,
             errorCode = err,
             mode = mode,
+            speedMode = speedMode,
             power = power,
             consumption = consumption,
             batteryHealth = health
