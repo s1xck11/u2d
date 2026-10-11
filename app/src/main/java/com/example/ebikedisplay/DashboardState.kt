@@ -8,6 +8,7 @@ data class DashboardState(
     val temperature: Int = 0,
     val errorCode: Int = 0,
     val mode: String = "P",
+    val speedMode: String = "1",
     val power: Float = 0f,
     val consumption: Float = 0f,
     val batteryHealth: Int = 100,
