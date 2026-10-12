@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,16 +21,17 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
+private const val TAG = "MainActivity"
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var bleManager: BleManager
-    private lateinit var webServer: WebServer
+    private var webServer: WebServer? = null
     private var state by mutableStateOf(DashboardState())
 
     private lateinit var devicePolicyManager: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
 
-    // Пока пустой список — потом будет наполняться реальными поездками
     private val trips = mutableListOf<Trip>()
 
     private val permissionLauncher = registerForActivityResult(
@@ -83,17 +85,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Запуск веб-сервера
-        try {
-            webServer = WebServer(
-                port = 8080,
-                stateProvider = { state },
-                tripsProvider = { trips }
-            )
-            webServer.start()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // Запускаем веб-сервер (с принудительным перебором портов)
+        startWebServer(8080)
 
         if (bleManager.hasPermissions()) {
             bleManager.autoConnect()
@@ -107,6 +100,24 @@ class MainActivity : ComponentActivity() {
                     state = state,
                     onConnectClick = { requestBlePermissionsAndScan() }
                 )
+            }
+        }
+    }
+
+    private fun startWebServer(port: Int) {
+        try {
+            webServer = WebServer(
+                port = port,
+                stateProvider = { state },
+                tripsProvider = { trips }
+            )
+            webServer?.start()
+            Log.d(TAG, "WebServer STARTED on port $port")
+        } catch (e: Exception) {
+            Log.e(TAG, "WebServer FAILED on port $port", e)
+            if (port < 8090) {
+                Log.d(TAG, "Пробуем порт ${port + 1}...")
+                startWebServer(port + 1)
             }
         }
     }
@@ -164,7 +175,8 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         bleManager.disconnect()
         try {
-            webServer.stop()
+            webServer?.stop()
+            Log.d(TAG, "WebServer stopped")
         } catch (e: Exception) {
             e.printStackTrace()
         }
