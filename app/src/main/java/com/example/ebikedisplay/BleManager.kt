@@ -214,8 +214,9 @@ class BleManager(
         val temp = parsed["TEMP"]?.toIntOrNull() ?: state.temperature
         val err = parsed["ERR"]?.toIntOrNull() ?: state.errorCode
         val speedMode = parsed["MODE"] ?: state.speedMode
+        val leftTurn = parsed["LEFT"] == "1"
+        val rightTurn = parsed["RIGHT"] == "1"
 
-        // Сигнал вкл/выкл с контроллера
         val powered = when (parsed["POWER"]) {
             "ON" -> true
             "OFF" -> false
@@ -252,7 +253,9 @@ class BleManager(
             power = power,
             consumption = consumption,
             batteryHealth = health,
-            powered = powered
+            powered = powered,
+            leftTurn = leftTurn,
+            rightTurn = rightTurn
         )
         onData(state)
     }
