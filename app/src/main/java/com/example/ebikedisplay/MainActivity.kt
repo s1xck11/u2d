@@ -45,6 +45,13 @@ class MainActivity : ComponentActivity() {
             runOnUiThread { state = newState }
         }
 
+        // Автоподключение при старте, если разрешения уже есть
+        if (bleManager.hasPermissions()) {
+            bleManager.autoConnect()
+        } else {
+            requestBlePermissionsAndScan()
+        }
+
         setContent {
             MaterialTheme {
                 DashboardScreen(
