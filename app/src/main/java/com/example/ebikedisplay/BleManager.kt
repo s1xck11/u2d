@@ -61,7 +61,6 @@ class BleManager(
         }
     }
 
-    // Автоподключение по сохранённому адресу
     fun autoConnect() {
         val address = savedDeviceAddress ?: return
         val adapter = bluetoothAdapter ?: return
@@ -99,7 +98,6 @@ class BleManager(
             scanner.stopScan(scanCallback)
             if (!state.bleConnected) {
                 updateStatus("Not found", false)
-                // Если нашли раньше — уже подключились. Если нет — попробуем позже.
                 scheduleReconnect()
             }
         }, 10000)
@@ -217,6 +215,13 @@ class BleManager(
         val err = parsed["ERR"]?.toIntOrNull() ?: state.errorCode
         val speedMode = parsed["MODE"] ?: state.speedMode
 
+        // Сигнал вкл/выкл с контроллера
+        val powered = when (parsed["POWER"]) {
+            "ON" -> true
+            "OFF" -> false
+            else -> state.powered
+        }
+
         val now = System.currentTimeMillis()
         var power = state.power
         if (lastTime > 0 && lastVoltage > 0f && speed > 1f) {
@@ -246,7 +251,8 @@ class BleManager(
             speedMode = speedMode,
             power = power,
             consumption = consumption,
-            batteryHealth = health
+            batteryHealth = health,
+            powered = powered
         )
         onData(state)
     }
