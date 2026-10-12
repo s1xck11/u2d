@@ -5,7 +5,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
@@ -34,7 +36,6 @@ fun DashboardScreen(
 ) {
     val isParked = state.speed < PARKING_THRESHOLD
 
-    // Анимация появления/исчезновения скутера и P
     val scooterAlpha by animateFloatAsState(
         targetValue = if (isParked) 1f else 0f,
         animationSpec = tween(durationMillis = 800),
@@ -51,15 +52,13 @@ fun DashboardScreen(
         label = "speedAlpha"
     )
 
-    // Размер цифры скорости — растёт с набором скорости
     val speedFontSize = (100 + (state.speed / 80f) * 40).sp
 
-    // Цвет цифры скорости: до 25 — зелёный, до 40 — жёлтый, 60+ — красный
     val speedColor = when {
-        state.speed < 25f -> Color(0xFF4CAF50)   // зелёный
-        state.speed < 40f -> Color(0xFFFFD54F)   // жёлтый
-        state.speed < 60f -> Color(0xFFFF9800)   // оранжевый
-        else -> Color(0xFFF44336)                // красный
+        state.speed < 25f -> Color(0xFF4CAF50)
+        state.speed < 40f -> Color(0xFFFFD54F)
+        state.speed < 60f -> Color(0xFFFF9800)
+        else -> Color(0xFFF44336)
     }
 
     Box(
@@ -67,7 +66,6 @@ fun DashboardScreen(
             .fillMaxSize()
             .background(Color(0xFF07080C))
     ) {
-        // Синий диагональный луч
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(
                 brush = Brush.linearGradient(
@@ -88,6 +86,16 @@ fun DashboardScreen(
             modifier = Modifier.align(Alignment.TopStart)
         )
 
+        // BLE-ИНДИКАТОР — большая плашка по центру сверху
+        BleStatusPill(
+            status = state.bleStatus,
+            connected = state.bleConnected,
+            onClick = onConnectClick,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 70.dp)
+        )
+
         // ЛЕВАЯ КОЛОНКА
         LeftColumn(
             state = state,
@@ -96,7 +104,7 @@ fun DashboardScreen(
                 .padding(top = 80.dp, bottom = 100.dp)
         )
 
-        // СКУТЕР (исчезает при движении)
+        // СКУТЕР
         Image(
             painter = painterResource(id = R.drawable.scooter),
             contentDescription = "Scooter",
@@ -109,7 +117,7 @@ fun DashboardScreen(
             contentScale = ContentScale.Fit
         )
 
-        // БУКВА P С ТЕНЬЮ (исчезает при движении)
+        // БУКВА P С ТЕНЬЮ
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -130,7 +138,7 @@ fun DashboardScreen(
             )
         }
 
-        // БОЛЬШАЯ ЦИФРА СКОРОСТИ (появляется при движении)
+        // БОЛЬШАЯ ЦИФРА СКОРОСТИ
         if (speedAlpha > 0.01f) {
             Column(
                 modifier = Modifier
@@ -161,8 +169,40 @@ fun DashboardScreen(
 }
 
 @Composable
+fun BleStatusPill(
+    status: String,
+    connected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val color = if (connected) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val icon = if (connected) Icons.Filled.BluetoothConnected else Icons.Filled.BluetoothDisabled
+
+    Row(
+        modifier = modifier
+            .background(Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = status,
+            color = color,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
 fun TopBar(speedMode: String, modifier: Modifier = Modifier) {
-    // 1 = Eco, 2 = City, 3 = Sport
     val (modeText, modeColor) = when (speedMode) {
         "1" -> "Eco" to Color(0xFF4CAF50)
         "2" -> "City" to Color(0xFFFFC107)
