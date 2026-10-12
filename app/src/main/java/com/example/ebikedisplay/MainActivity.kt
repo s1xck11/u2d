@@ -1,8 +1,13 @@
 package com.example.ebikedisplay
 
 import android.Manifest
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +25,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var bleManager: BleManager
     private var state by mutableStateOf(DashboardState())
 
+    private lateinit var devicePolicyManager: DevicePolicyManager
+    private lateinit var adminComponent: ComponentName
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -31,6 +39,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val adminLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { /* неважно, что вернул пользователь — просто пробуем дальше */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -39,13 +51,37 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        bleManager = BleManager(applicationContext) { newState ->
-            runOnUiThread { state = newState }
+        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        adminComponent = ComponentName(this, ScreenAdminReceiver::class.java)
+
+        // Запрашиваем права администратора, если их нет
+        if (!devicePolicyManager.isAdminActive(adminComponent)) {
+            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                putExtra(
+                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                    "Нужно для блокировки экрана при выключении скутера"
+                )
+            }
+            adminLauncher.launch(intent)
         }
 
-        // Автоподключение при старте, если разрешения уже есть
+        bleManager = BleManager(applicationContext) { newState ->
+            runOnUiThread {
+                val wasPowered = state.powered
+                state = newState
+                // Если сигнал "включён" только что пришёл — будим экран
+                if (!wasPowered && newState.powered) {
+                    turnScreenOn()
+                }
+                // Если "выключен" — блокируем
+                if (wasPowered && !newState.powered) {
+                    lockScreen()
+                }
+            }
+        }
+
         if (bleManager.hasPermissions()) {
             bleManager.autoConnect()
         } else {
@@ -74,6 +110,45 @@ class MainActivity : ComponentActivity() {
             )
         }
         permissionLauncher.launch(permissions)
+    }
+
+    // Блокировка экрана через Device Admin
+    private fun lockScreen() {
+        try {
+            if (devicePolicyManager.isAdminActive(adminComponent)) {
+                devicePolicyManager.lockNow()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // Будим экран и показываем поверх блокировки
+    @Suppress("DEPRECATION")
+    private fun turnScreenOn() {
+        try {
+            // Флаги, которые показывают окно поверх блокировки и включают экран
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Пробуем разбудить через PowerManager
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "EBikeDisplay::WakeLock"
+            )
+            wakeLock.acquire(3000L) // держим 3 секунды
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onDestroy() {
