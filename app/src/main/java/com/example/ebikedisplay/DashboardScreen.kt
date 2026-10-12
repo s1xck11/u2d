@@ -86,14 +86,14 @@ fun DashboardScreen(
             modifier = Modifier.align(Alignment.TopStart)
         )
 
-        // BLE-ИНДИКАТОР — большая плашка по центру сверху
+        // BLE-ИНДИКАТОР — маленький, в правом верхнем углу, под верхней панелью
         BleStatusPill(
             status = state.bleStatus,
             connected = state.bleConnected,
             onClick = onConnectClick,
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 70.dp)
+                .align(Alignment.TopEnd)
+                .padding(top = 60.dp, end = 28.dp)
         )
 
         // ЛЕВАЯ КОЛОНКА
@@ -180,22 +180,22 @@ fun BleStatusPill(
 
     Row(
         modifier = modifier
-            .background(Color(0xFF1A1A1A), RoundedCornerShape(24.dp))
+            .background(Color(0xFF1A1A1A).copy(alpha = 0.7f), RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = color,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(18.dp)
         )
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = status,
             color = color,
-            fontSize = 18.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -233,6 +233,7 @@ fun TopBar(speedMode: String, modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // Справа — батарея и сигнал, но статус BLE будет ниже отдельной плашкой
         Icon(Icons.Filled.BatteryFull, null, tint = Color(0xFF4A78C0), modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(14.dp))
         Icon(Icons.Filled.SignalCellularAlt, null, tint = Color(0xFF4A78C0), modifier = Modifier.size(22.dp))
