@@ -55,10 +55,6 @@ class WebServer(
                     .row { display: flex; justify-content: space-between; padding: 6px 0; }
                     .label { color: #888; font-size: 14px; }
                     .value { font-weight: bold; font-size: 18px; }
-                    .green { color: #4CAF50; }
-                    .yellow { color: #FFC107; }
-                    .red { color: #F44336; }
-                    .orange { color: #FF9800; }
                 </style>
             </head>
             <body>
@@ -82,7 +78,6 @@ class WebServer(
                         try {
                             const r = await fetch('/api/state');
                             const d = await r.json();
-
                             document.getElementById('speed').textContent = d.speed.toFixed(1) + ' km/h';
                             document.getElementById('voltage').textContent = d.voltage.toFixed(1) + ' V';
                             document.getElementById('battery').textContent = d.battery + ' %';
@@ -90,7 +85,6 @@ class WebServer(
                             document.getElementById('mode').textContent = d.speedMode;
                             document.getElementById('power').textContent = d.power.toFixed(0) + ' W';
                             document.getElementById('temp').textContent = d.temperature + ' °C';
-
                             let turn = '';
                             if (d.leftTurn) turn += '◀ ';
                             if (d.rightTurn) turn += '▶';
