@@ -13,5 +13,6 @@ data class DashboardState(
     val consumption: Float = 0f,
     val batteryHealth: Int = 100,
     val bleStatus: String = "Disconnected",
-    val bleConnected: Boolean = false
+    val bleConnected: Boolean = false,
+    val powered: Boolean = true   // ← НОВОЕ: сигнал "вкл/выкл" с контроллера
 )
