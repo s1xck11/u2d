@@ -27,6 +27,7 @@ private val TX_CHARACTERISTIC_UUID: UUID = UUID.fromString("6E400003-B5A3-F393-E
 private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
 
 private const val DEVICE_NAME = "EBike-Display"
+private const val RECONNECT_DELAY_MS = 5000L
 
 class BleManager(
     private val context: Context,
@@ -34,6 +35,7 @@ class BleManager(
 ) {
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothGatt: BluetoothGatt? = null
+    private var savedDeviceAddress: String? = null
 
     private var state = DashboardState()
 
@@ -41,6 +43,9 @@ class BleManager(
     private var lastTime: Long = 0L
     private var accumulatedWh: Float = 0f
     private var accumulatedKm: Float = 0f
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var reconnectRunnable: Runnable? = null
 
     init {
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
@@ -56,10 +61,27 @@ class BleManager(
         }
     }
 
+    // Автоподключение по сохранённому адресу
+    fun autoConnect() {
+        val address = savedDeviceAddress ?: return
+        val adapter = bluetoothAdapter ?: return
+        if (!adapter.isEnabled) return
+
+        try {
+            val device = adapter.getRemoteDevice(address)
+            Log.d(TAG, "Автоподключение к $address")
+            updateStatus("Reconnecting...", false)
+            connect(device)
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка автоподключения", e)
+        }
+    }
+
     fun startScan() {
         val adapter = bluetoothAdapter ?: return
         if (!adapter.isEnabled) {
             Log.e(TAG, "Bluetooth выключен")
+            updateStatus("BT off", false)
             return
         }
 
@@ -73,10 +95,12 @@ class BleManager(
         scanner.startScan(null, settings, scanCallback)
         Log.d(TAG, "Сканирование запущено")
 
-        Handler(Looper.getMainLooper()).postDelayed({
+        handler.postDelayed({
             scanner.stopScan(scanCallback)
             if (!state.bleConnected) {
                 updateStatus("Not found", false)
+                // Если нашли раньше — уже подключились. Если нет — попробуем позже.
+                scheduleReconnect()
             }
         }, 10000)
     }
@@ -91,6 +115,7 @@ class BleManager(
             if (name == DEVICE_NAME) {
                 val scanner = bluetoothAdapter?.bluetoothLeScanner
                 scanner?.stopScan(this)
+                savedDeviceAddress = device.address
                 Log.d(TAG, "Нашли $DEVICE_NAME, подключаемся...")
                 connect(device)
             }
@@ -99,16 +124,27 @@ class BleManager(
         override fun onScanFailed(errorCode: Int) {
             Log.e(TAG, "Ошибка сканирования: $errorCode")
             updateStatus("Scan error", false)
+            scheduleReconnect()
         }
     }
 
     private fun connect(device: BluetoothDevice) {
         try {
             updateStatus("Connecting...", false)
+            bluetoothGatt?.close()
             bluetoothGatt = device.connectGatt(context, false, gattCallback)
         } catch (e: SecurityException) {
             Log.e(TAG, "Нет разрешения на подключение", e)
         }
+    }
+
+    private fun scheduleReconnect() {
+        reconnectRunnable?.let { handler.removeCallbacks(it) }
+        reconnectRunnable = Runnable {
+            Log.d(TAG, "Пытаемся переподключиться...")
+            autoConnect()
+        }
+        handler.postDelayed(reconnectRunnable!!, RECONNECT_DELAY_MS)
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -117,6 +153,7 @@ class BleManager(
                 BluetoothProfile.STATE_CONNECTED -> {
                     Log.d(TAG, "Подключено, ищем сервисы...")
                     updateStatus("Connected", true)
+                    reconnectRunnable?.let { handler.removeCallbacks(it) }
                     try {
                         gatt.discoverServices()
                     } catch (e: SecurityException) {
@@ -126,6 +163,7 @@ class BleManager(
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     Log.d(TAG, "Отключено")
                     updateStatus("Disconnected", false)
+                    scheduleReconnect()
                 }
             }
         }
@@ -220,6 +258,7 @@ class BleManager(
 
     fun disconnect() {
         try {
+            reconnectRunnable?.let { handler.removeCallbacks(it) }
             bluetoothGatt?.close()
             bluetoothGatt = null
         } catch (e: SecurityException) {
