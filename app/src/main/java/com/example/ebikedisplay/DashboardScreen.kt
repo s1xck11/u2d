@@ -1,6 +1,11 @@
 package com.example.ebikedisplay
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -20,6 +25,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -86,7 +92,7 @@ fun DashboardScreen(
             modifier = Modifier.align(Alignment.TopStart)
         )
 
-        // BLE-ИНДИКАТОР — маленький, в правом верхнем углу, под верхней панелью
+        // BLE-ИНДИКАТОР
         BleStatusPill(
             status = state.bleStatus,
             connected = state.bleConnected,
@@ -138,7 +144,7 @@ fun DashboardScreen(
             )
         }
 
-        // БОЛЬШАЯ ЦИФРА СКОРОСТИ
+        // СКОРОСТЬ
         if (speedAlpha > 0.01f) {
             Column(
                 modifier = Modifier
@@ -160,11 +166,75 @@ fun DashboardScreen(
             }
         }
 
+        // ЛЕВЫЙ ПОВОРОТНИК
+        TurnSignalArrow(
+            active = state.leftTurn,
+            pointsRight = false,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 8.dp)
+        )
+
+        // ПРАВЫЙ ПОВОРОТНИК
+        TurnSignalArrow(
+            active = state.rightTurn,
+            pointsRight = true,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 8.dp)
+        )
+
         // НИЖНЯЯ ПАНЕЛЬ
         BottomBar(
             state = state,
             modifier = Modifier.align(Alignment.BottomStart)
         )
+    }
+}
+
+@Composable
+fun TurnSignalArrow(
+    active: Boolean,
+    pointsRight: Boolean,
+    modifier: Modifier = Modifier
+) {
+    // Мигание: 500 мс вкл, 500 мс выкл
+    val infiniteTransition = rememberInfiniteTransition(label = "turnBlink")
+    val blinkAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "blinkAlpha"
+    )
+
+    val alpha = if (active) blinkAlpha else 0f
+    val color = Color(0xFFFF9800)
+
+    Canvas(
+        modifier = modifier
+            .size(80.dp)
+            .alpha(alpha)
+    ) {
+        val w = size.width
+        val h = size.height
+
+        val path = Path().apply {
+            if (pointsRight) {
+                moveTo(w * 0.2f, h * 0.2f)
+                lineTo(w * 0.8f, h * 0.5f)
+                lineTo(w * 0.2f, h * 0.8f)
+            } else {
+                moveTo(w * 0.8f, h * 0.2f)
+                lineTo(w * 0.2f, h * 0.5f)
+                lineTo(w * 0.8f, h * 0.8f)
+            }
+            close()
+        }
+
+        drawPath(path = path, color = color)
     }
 }
 
@@ -233,7 +303,6 @@ fun TopBar(speedMode: String, modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Справа — батарея и сигнал, но статус BLE будет ниже отдельной плашкой
         Icon(Icons.Filled.BatteryFull, null, tint = Color(0xFF4A78C0), modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(14.dp))
         Icon(Icons.Filled.SignalCellularAlt, null, tint = Color(0xFF4A78C0), modifier = Modifier.size(22.dp))
