@@ -23,10 +23,14 @@ import androidx.core.view.WindowInsetsControllerCompat
 class MainActivity : ComponentActivity() {
 
     private lateinit var bleManager: BleManager
+    private lateinit var webServer: WebServer
     private var state by mutableStateOf(DashboardState())
 
     private lateinit var devicePolicyManager: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
+
+    // Пока пустой список — потом будет наполняться реальными поездками
+    private val trips = mutableListOf<Trip>()
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -41,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
     private val adminLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { /* неважно, что вернул пользователь — просто пробуем дальше */ }
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,7 +59,6 @@ class MainActivity : ComponentActivity() {
         devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         adminComponent = ComponentName(this, ScreenAdminReceiver::class.java)
 
-        // Запрашиваем права администратора, если их нет
         if (!devicePolicyManager.isAdminActive(adminComponent)) {
             val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
                 putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
@@ -71,15 +74,25 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 val wasPowered = state.powered
                 state = newState
-                // Если сигнал "включён" только что пришёл — будим экран
                 if (!wasPowered && newState.powered) {
                     turnScreenOn()
                 }
-                // Если "выключен" — блокируем
                 if (wasPowered && !newState.powered) {
                     lockScreen()
                 }
             }
+        }
+
+        // Запуск веб-сервера
+        try {
+            webServer = WebServer(
+                port = 8080,
+                stateProvider = { state },
+                tripsProvider = { trips }
+            )
+            webServer.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
         if (bleManager.hasPermissions()) {
@@ -112,7 +125,6 @@ class MainActivity : ComponentActivity() {
         permissionLauncher.launch(permissions)
     }
 
-    // Блокировка экрана через Device Admin
     private fun lockScreen() {
         try {
             if (devicePolicyManager.isAdminActive(adminComponent)) {
@@ -123,11 +135,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Будим экран и показываем поверх блокировки
     @Suppress("DEPRECATION")
     private fun turnScreenOn() {
         try {
-            // Флаги, которые показывают окно поверх блокировки и включают экран
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
@@ -138,14 +148,13 @@ class MainActivity : ComponentActivity() {
             e.printStackTrace()
         }
 
-        // Пробуем разбудить через PowerManager
         try {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
             val wakeLock = pm.newWakeLock(
                 PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "EBikeDisplay::WakeLock"
             )
-            wakeLock.acquire(3000L) // держим 3 секунды
+            wakeLock.acquire(3000L)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -154,5 +163,10 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         bleManager.disconnect()
+        try {
+            webServer.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
